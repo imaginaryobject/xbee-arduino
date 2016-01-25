@@ -328,7 +328,6 @@ uint8_t RxIoSampleBaseResponse::getSampleOffset() {
 	return getRssiOffset() + 2;
 }
 
-
 uint8_t RxIoSampleBaseResponse::getSampleSize() {
 	return getFrameData()[getSampleOffset()];
 }
@@ -341,10 +340,6 @@ bool RxIoSampleBaseResponse::containsDigital() {
 	return (getFrameData()[getSampleOffset() + 1] & 0x1) > 0 || getFrameData()[getSampleOffset() + 2] > 0;
 }
 
-//uint16_t RxIoSampleBaseResponse::getAnalog0(uint8_t sample) {
-//	return getAnalog(0, sample);
-//}
-
 bool RxIoSampleBaseResponse::isAnalogEnabled(uint8_t pin) {
 	return (((getFrameData()[getSampleOffset() + 1] >> (pin + 1)) & 1) == 1);
 }
@@ -356,97 +351,6 @@ bool RxIoSampleBaseResponse::isDigitalEnabled(uint8_t pin) {
 		return (getFrameData()[getSampleOffset() + 1] & 1) == 1;
 	}
 }
-
-//	// verified (from XBee-API)
-//	private int getSampleWidth() {
-//		int width = 0;
-//
-//		// width of sample depends on how many I/O pins are enabled. add one for each analog that's enabled
-//		for (int i = 0; i <= 5; i++) {
-//			if (isAnalogEnabled(i)) {
-//				// each analog is two bytes
-//				width+=2;
-//			}
-//		}
-//
-//		if (this.containsDigital()) {
-//			// digital enabled takes two bytes, no matter how many pins enabled
-//			width+= 2;
-//		}
-//
-//		return width;
-//	}
-//
-//	private int getStartIndex() {
-//
-//		int startIndex;
-//
-//		if (this.getSourceAddress() instanceof XBeeAddress16) {
-//			// 16 bit
-//			startIndex = 7;
-//		} else {
-//			// 64 bit
-//			startIndex = 13;
-//		}
-//
-//		return startIndex;
-//	}
-//
-//	public int getDigitalMsb(int sample) {
-//		// msb digital always starts 3 bytes after sample size
-//		return this.getProcessedPacketBytes()[this.getStartIndex() + 3 + this.getSampleWidth() * sample];
-//	}
-//
-//	public int getDigitalLsb(int sample) {
-//		return this.getProcessedPacketBytes()[this.getStartIndex() + 3 + this.getSampleWidth() * sample + 1];
-//	}
-//
-//	public Boolean isDigitalOn(int pin, int sample) {
-//
-//		if (sample < 0 || sample >= this.getSampleSize()) {
-//			throw new IllegalArgumentException("invalid sample size: " + sample);
-//		}
-//
-//		if (!this.containsDigital()) {
-//			throw new RuntimeException("Digital is not enabled");
-//		}
-//
-//		if (pin >= 0 && pin < 8) {
-//			return ((this.getDigitalLsb(sample) >> pin) & 1) == 1;
-//		} else if (pin == 8) {
-//			// uses msb dio line
-//			return (this.getDigitalMsb(sample) & 1) == 1;
-//		} else {
-//			throw new IllegalArgumentException("Invalid pin: " + pin);
-//		}
-//	}
-//
-//	public Integer getAnalog(int pin, int sample) {
-//
-//		if (sample < 0 || sample >= this.getSampleSize()) {
-//			throw new IllegalArgumentException("invalid sample size: " + sample);
-//		}
-//
-//		// analog starts 3 bytes after start of sample, if no dio enabled
-//		int startIndex = this.getStartIndex() + 3;
-//
-//		if (this.containsDigital()) {
-//			// make room for digital i/o sample (2 bytes per sample)
-//			startIndex+= 2;
-//		}
-//
-//		startIndex+= this.getSampleWidth() * sample;
-//
-//		// start depends on how many pins before this pin are enabled
-//		// this will throw illegalargumentexception if invalid pin
-//		for (int i = 0; i < pin; i++) {
-//			if (isAnalogEnabled(i)) {
-//				startIndex+=2;
-//			}
-//		}
-//
-//		return (this.getProcessedPacketBytes()[startIndex] << 8) + this.getProcessedPacketBytes()[startIndex + 1];
-//	}
 
 uint8_t RxIoSampleBaseResponse::getSampleStart(uint8_t sample) {
 	uint8_t spacing = 0;
@@ -494,11 +398,6 @@ bool RxIoSampleBaseResponse::isDigitalOn(uint8_t pin, uint8_t sample) {
 		return (getFrameData()[getSampleStart(sample)] & 1) == 1;
 	}
 }
-
-
-//bool RxIoSampleBaseResponse::isDigital0On(uint8_t sample) {
-//	return isDigitalOn(0, sample);
-//}
 
 Rx16IoSampleResponse::Rx16IoSampleResponse() : RxIoSampleBaseResponse() {
 
@@ -820,6 +719,14 @@ void XBee::setSerial(Stream &serial) {
 	_serial = &serial;
 }
 
+void XBee::setApMode(uint8_t apMode) {
+	_apMode = apMode;
+}
+
+uint8_t XBee::getApMode() {
+	return _apMode;
+}
+
 bool XBee::available() {
 	return _serial->available();
 }
@@ -1002,19 +909,6 @@ uint8_t XBeeRequest::getApiId() {
 void XBeeRequest::setApiId(uint8_t apiId) {
 	_apiId = apiId;
 }
-
-//void XBeeRequest::reset() {
-//	_frameId = DEFAULT_FRAME_ID;
-//}
-
-//uint8_t XBeeRequest::getPayloadOffset() {
-//	return _payloadOffset;
-//}
-//
-//uint8_t XBeeRequest::setPayloadOffset(uint8_t payloadOffset) {
-//	_payloadOffset = payloadOffset;
-//}
-
 
 PayloadRequest::PayloadRequest(uint8_t apiId, uint8_t frameId, uint8_t *payload, uint8_t payloadLength) : XBeeRequest(apiId, frameId) {
 	_payloadPtr = payload;
@@ -1380,10 +1274,6 @@ void AtCommandRequest::clearCommandValue() {
 	_commandValueLength = 0;
 }
 
-//void AtCommandRequest::reset() {
-//	 XBeeRequest::reset();
-//}
-
 uint8_t AtCommandRequest::getFrameDataLength() {
 	// command is 2 byte + length of value
 	return AT_COMMAND_API_LENGTH + _commandValueLength;
@@ -1487,14 +1377,13 @@ uint8_t RemoteAtCommandRequest::getFrameDataLength() {
 	return REMOTE_AT_COMMAND_API_LENGTH + getCommandValueLength();
 }
 
-
-// TODO
-//GenericRequest::GenericRequest(uint8_t* frame, uint8_t len, uint8_t apiId): XBeeRequest(apiId, *(frame), len) {
-//	_frame = frame;
-//}
-
 void XBee::send(XBeeRequest &request) {
 	// the new new deal
+
+	bool escape = true;
+	if (_apMode == 1) {
+		escape = false;
+	}
 
 	sendByte(START_BYTE, false);
 
@@ -1502,12 +1391,12 @@ void XBee::send(XBeeRequest &request) {
 	uint8_t msbLen = ((request.getFrameDataLength() + 2) >> 8) & 0xff;
 	uint8_t lsbLen = (request.getFrameDataLength() + 2) & 0xff;
 
-	sendByte(msbLen, true);
-	sendByte(lsbLen, true);
+	sendByte(msbLen, escape);
+	sendByte(lsbLen, escape);
 
 	// api id
-	sendByte(request.getApiId(), true);
-	sendByte(request.getFrameId(), true);
+	sendByte(request.getApiId(), escape);
+	sendByte(request.getFrameId(), escape);
 
 	uint8_t checksum = 0;
 
@@ -1516,7 +1405,7 @@ void XBee::send(XBeeRequest &request) {
 	checksum+= request.getFrameId();
 
 	for (int i = 0; i < request.getFrameDataLength(); i++) {
-		sendByte(request.getFrameData(i), true);
+		sendByte(request.getFrameData(i), escape);
 		checksum+= request.getFrameData(i);
 	}
 
@@ -1524,11 +1413,10 @@ void XBee::send(XBeeRequest &request) {
 	checksum = 0xff - checksum;
 
 	// send checksum
-	sendByte(checksum, true);
+	sendByte(checksum, escape);
 }
 
 void XBee::sendByte(uint8_t b, bool escape) {
-
 	if (escape && (b == START_BYTE || b == ESCAPE || b == XON || b == XOFF)) {
 		write(ESCAPE);
 		write(b ^ 0x20);
@@ -1782,4 +1670,3 @@ uint8_t XBeeWithCallbacks::waitForStatus(uint8_t frameId, uint16_t timeout) {
 	} while (millis() - start < timeout);
 	return XBEE_WAIT_TIMEOUT ;
 }
-

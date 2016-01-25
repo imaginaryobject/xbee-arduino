@@ -734,6 +734,7 @@ protected:
 	void setApiId(uint8_t apiId);
 private:
 	uint8_t _apiId;
+	uint8_t _apMode;
 	uint8_t _frameId;
 };
 
@@ -809,6 +810,14 @@ public:
 	 * Specify the serial port.  Only relevant for Arduinos that support multiple serial ports (e.g. Mega)
 	 */
 	void setSerial(Stream &serial);
+	/**
+	 * Sets the AP mode (1 or 2)
+	 */
+	void setApMode(uint8_t apMode);
+	/**
+	 * Returns the AP mode
+	 */
+	uint8_t getApMode();
 private:
 	bool available();
 	uint8_t read();
@@ -818,6 +827,7 @@ private:
 	void resetResponse();
 	XBeeResponse _response;
 	bool _escape;
+	uint8_t _apMode;
 	// current packet position for response.  just a state variable for packet parsing and has no relevance for the response otherwise
 	uint8_t _pos;
 	// last byte read
